@@ -1,41 +1,28 @@
 import streamlit as st
-from datetime import date
+from datetime import date, datetime # datetime import add kiya
 from utils.db_supabase import supabase
 
 def render_dashboard():
-    st.title("Good Morning, Amit 👋")
+    # --- NAYA CODE: Time-based Greeting ---
+    current_hour = datetime.now().hour
+    
+    if current_hour < 12:
+        greeting = "Good Morning"
+    elif 12 <= current_hour < 17:
+        greeting = "Good Afternoon"
+    else:
+        greeting = "Good Evening"
+        
+    # Session state se user ka naam nikalna
+    user_name = st.session_state.get("user_name", "Student")
+    
+    st.title(f"{greeting}, {user_name} 👋")
     st.markdown("Here is your battle plan for today.")
 
     today_str = str(date.today())
 
-    # --- 1. Study Time Calculation ---
-    total_minutes = 0
-    try:
-        session_response = supabase.table("study_sessions").select("duration_minutes").eq("session_date", today_str).execute()
-        if session_response.data:
-            total_minutes = sum(session['duration_minutes'] for session in session_response.data)
-    except Exception as e:
-        pass
-
-    hours = total_minutes // 60
-    mins = total_minutes % 60
-    study_time_display = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
-
-    # --- 2. Task Progress Calculation (NAYA CODE) ---
-    total_tasks = 0
-    completed_tasks = 0
-    progress_percentage = 0
-    tasks = []
-
-    try:
-        task_response = supabase.table("daily_tasks").select("*").eq("target_date", today_str).execute()
-        tasks = task_response.data
-        if tasks:
-            total_tasks = len(tasks)
-            completed_tasks = sum(1 for task in tasks if task['status'])
-            progress_percentage = int((completed_tasks / total_tasks) * 100)
-    except Exception as e:
-        st.error("Error fetching tasks.")
+    # --- Iske neeche tumhara pehle wala metrics aur progress ka code rahega ---
+    # ... (total_minutes calculation etc.)
 
     # --- Top Level Metrics ---
     col1, col2, col3 = st.columns(3)
