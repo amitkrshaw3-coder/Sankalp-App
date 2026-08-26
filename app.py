@@ -46,10 +46,10 @@ if 'pending_user' not in st.session_state:
 # =========================================================
 def loading_screen():
     st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([2, 1, 2])
+    # [4, 2, 4] ratio se middle column perfectly center mein rahega
+    col1, col2, col3 = st.columns([4, 2, 4])
     with col2:
-        # Chhota logo loading screen par
-        st.image("1000094047.png", width=120)
+        st.image("1000094047.png", use_container_width=True)
         
     st.markdown("<h2 style='text-align: center; color: #4CAF50;'>Login Successful!</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; color: #777;'>Dashboard secure kiya ja raha hai, kripya pratiksha karein...</p>", unsafe_allow_html=True)
@@ -57,13 +57,11 @@ def loading_screen():
     progress_text = "System load ho raha hai..."
     my_bar = st.progress(0, text=progress_text)
     
-    # 100 steps * 0.1 second = Total 10 seconds loading
     for percent_complete in range(100):
         time.sleep(0.1) 
         my_bar.progress(percent_complete + 1, text=f"Loading Dashboard... {percent_complete + 1}%")
     
     time.sleep(0.5)
-    # Ab user ko login state mein daal kar dashboard khol denge
     st.session_state.user = st.session_state.pending_user
     st.session_state.show_loading = False
     st.rerun()
@@ -72,10 +70,10 @@ def loading_screen():
 # LOGIN / SIGNUP PAGE
 # =========================================================
 def login_page():
-    # Logo ka size chhota karne ke liye width=150 set kiya hai aur columns use kiye hain
-    col1, col2, col3 = st.columns([2, 1, 2])
+    # [4, 2, 4] ratio se middle column perfectly center mein rahega
+    col1, col2, col3 = st.columns([4, 2, 4])
     with col2:
-        st.image("1000094047.png", width=150)
+        st.image("1000094047.png", use_container_width=True)
         
     st.markdown("<h2 style='text-align: center;'>🔐 Sankalp - Login</h2>", unsafe_allow_html=True)
     
@@ -95,7 +93,6 @@ def login_page():
     elif choice == "Login":
         if st.button("Login"):
             try:
-                # Credentials check karne ke baad loading screen trigger hogi
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
                 st.session_state.pending_user = response.user
                 st.session_state.show_loading = True
@@ -356,6 +353,7 @@ st.markdown("""
 .big-number { font-size: 38px; font-weight: 800; }
 .small-text { color: #777; }
 .urge-box { padding: 25px; border-radius: 20px; text-align: center; border: 2px solid rgba(255,80,80,0.35); }
+/* Make certain specific text green if needed, but config.toml will handle the main theme */
 </style>
 """, unsafe_allow_html=True)
 
