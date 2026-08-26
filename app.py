@@ -40,7 +40,7 @@ if 'user' not in st.session_state:
     st.session_state.user = None
 
 def login_page():
-    # 1. Logo dikhane ka code (Center mein lane ke liye columns use kiye hain)
+    # 1. Logo dikhane ka code
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # Aapka logo yahan show hoga
@@ -83,6 +83,13 @@ def login_page():
                 st.rerun() 
             except Exception as e:
                 st.error("❌ Galat Email ya Password. Kripya dobara check karein.")
+
+# =========================================================
+# YEH LINES MISSING THI - INKI WAJAH SE LOGIN RUKTA HAI
+# =========================================================
+if st.session_state.user is None:
+    login_page()
+    st.stop()
 
 
 # =========================================================
@@ -359,8 +366,8 @@ with st.sidebar:
         supabase.auth.sign_out()
         st.session_state.user = None
         st.rerun()
+        
     st.divider()
-    # ---------------------------------------
 
     st.markdown("## 🧭 Sankalp")
 
