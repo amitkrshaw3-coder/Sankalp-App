@@ -1,39 +1,90 @@
 import streamlit as st
 
-# 1. Page ki nayi setting (Clean aur Modern look)
+# 1. Page Config (Dark Mode / Clean Look)
 st.set_page_config(page_title="Sankalp App", page_icon="🌿", layout="centered")
 
-# 2. Logo ko center me aur perfect size me karne ke liye Columns ka use
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    st.image("1000094047.png", use_container_width=True)
+# --- SIDEBAR NAVIGATION (Pages You Should Build wale section se inspired) ---
+st.sidebar.image("1000094047.png", width=100)
+st.sidebar.title("SANKALP")
+page = st.sidebar.radio("Navigation", ["Dashboard", "Urge Help", "Recovery Journal", "Settings"])
 
-# 3. Main Title - Naye Premium Style ke sath
-st.markdown("<h1 style='text-align: center; color: #4CAF50; font-size: 3.2em; font-weight: 800; margin-bottom: 0px;'>S A N K A L P</h1>", unsafe_allow_html=True)
-st.markdown("<h4 style='text-align: center; color: #81C784; letter-spacing: 3px; margin-top: -10px;'>STRONG MIND • BETTER LIFE</h4>", unsafe_allow_html=True)
+# ==========================================
+# PAGE 1: MAIN DASHBOARD (Home Screen)
+# ==========================================
+if page == "Dashboard":
+    # Logo and Header
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+         st.image("1000094047.png", use_container_width=True)
+         
+    st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>S A N K A L P</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #81C784; font-size: 18px;'>Take back control of your mind.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: gray;'>Day 12 • Stay Strong</p>", unsafe_allow_html=True)
+    
+    st.write("---")
 
-st.write("---")
+    # 1. Current Streak Section
+    st.markdown("### 🔥 Current Streak")
+    st.markdown("<h1 style='color: #4CAF50; font-size: 3.5rem; margin-top: -15px;'>12 Days</h1>", unsafe_allow_html=True)
+    st.caption("Keep going — you're building discipline.")
 
-# 4. Naya 'Dashboard' Tracker Look 
-st.markdown("<h3 style='text-align: center;'>📊 Aapki Pragati</h3>", unsafe_allow_html=True)
-st.text("") # Thodi space ke liye
+    # 2. Metrics Section (Mind Score & Urges)
+    m1, m2 = st.columns(2)
+    with m1:
+        st.metric(label="🧠 Mind Score", value="92%")
+    with m2:
+        st.metric(label="⚠️ Urges Today", value="1")
 
-m1, m2, m3 = st.columns(3)
-m1.metric(label="🛡️ Protection", value="Secured", delta="Active")
-m2.metric(label="🔥 No-Fap Streak", value="Day 1", delta="+1 Aaj")
-m3.metric(label="🎯 Mind Score", value="100%", delta="Focused")
+    st.write("---")
 
-st.write("---")
+    # 3. Urge Button Section (When an urge hits)
+    st.markdown("### 🚨 When an urge hits")
+    st.info("Breathe • Delay • Move • Win")
+    
+    btn1, btn2 = st.columns(2)
+    with btn1:
+        st.button("🏃 Start Exercise", use_container_width=True, type="primary")
+    with btn2:
+        st.button("📞 Call Partner", use_container_width=True)
 
-# 5. Khubsurat Tabs (Colorful Highlight Boxes ke sath)
-st.markdown("### 🧘 Sankalp Ke 4 Stambh")
-tab1, tab2, tab3, tab4 = st.tabs(["🎯 FOCUS", "🛡️ DISCIPLINE", "🧘 CONTROL", "🏔️ FREEDOM"])
+    st.write("---")
 
-with tab1:
-    st.info("**Focus (ध्यान):** Apne dhyan ko bhatakne na dein. Apna poora focus apni aage ki padhai, competitive exams, aur career goals par lagayein.")
-with tab2:
-    st.warning("**Discipline (अनुशासन):** Lagataar prayas hi safalta ki kunji hai. Har roz apna time-table follow karna aur bhatkaav se bachna hi asli discipline hai.")
-with tab3:
-    st.success("**Control (नियंत्रण):** Apne mind aur emotions ko control karein. Jab bhi kamzori mehsoos ho, lambi saans lein aur is app ko dekhein.")
-with tab4:
-    st.error("**Freedom (स्वतंत्रता):** Buri aadaton se azaadi hi asli azaadi hai. Ek baar yeh aadat chhut gayi, toh aap zindagi me kuch bhi hasil kar sakte hain.")
+    # 4. Today's Growth
+    st.markdown("### 🌱 Today's Growth")
+    st.checkbox("📘 Read 10 pages")
+    st.caption("Small wins beat strong urges.")
+
+    st.write("---")
+
+    # 5. Recovery Toolkit
+    st.markdown("### 🛠️ Recovery Toolkit")
+    tk1, tk2, tk3 = st.columns(3)
+    with tk1:
+        st.button("🧘 Meditate", use_container_width=True)
+    with tk2:
+        st.button("📓 Journal", use_container_width=True)
+    with tk3:
+        st.button("🎯 Goals", use_container_width=True)
+
+# ==========================================
+# PAGE 2: URGE HELP (Panic Button Page)
+# ==========================================
+elif page == "Urge Help":
+    st.title("🚨 Emergency Urge Help")
+    st.warning("Take a deep breath. You are stronger than your urges. Wait for 10 minutes before making any decision.")
+    st.video("https://www.youtube.com/watch?v=inpok4MKVLM") # Calm breathing video example
+    st.button("I feel better now, back to Dashboard")
+
+# ==========================================
+# PAGE 3 & 4: PLACEHOLDERS
+# ==========================================
+elif page == "Recovery Journal":
+    st.title("📓 Recovery Journal")
+    st.text_area("Write your daily thoughts, mood tracking, and triggers here...")
+    st.button("Save Entry")
+
+elif page == "Settings":
+    st.title("⚙️ Settings")
+    st.write("Smart Porn Blocker Settings:")
+    st.checkbox("Enable DNS Filtering", value=True)
+    st.checkbox("Strict Mode (No override)", value=False)
