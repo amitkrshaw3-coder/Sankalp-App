@@ -625,6 +625,9 @@ elif st.session_state.page == "Progress":
 # =========================================================
 # SETTINGS
 # =========================================================
+# =========================================================
+# SETTINGS
+# =========================================================
 
 elif st.session_state.page == "Settings":
     st.title("⚙️ Settings")
@@ -650,6 +653,37 @@ elif st.session_state.page == "Settings":
         reset_streak()
         st.success("Your new streak starts today.")
         st.rerun()
+
+    # 👇👇 NAYA DELETE ACCOUNT SECTION 👇👇
+    st.divider()
+    st.subheader("🗑️ Delete Account")
+    st.error("Chetawani: Yeh action wapas nahi liya ja sakta. Aapka saara app data hamesha ke liye delete ho jayega.")
+    
+    if st.button("Delete My Account", type="primary"):
+        # 1. Database se saara data delete karna
+        conn.execute("DELETE FROM checkins")
+        conn.execute("DELETE FROM journal")
+        conn.execute("DELETE FROM urges")
+        conn.commit()
+        reset_streak()
+        
+        # 2. User ko Supabase se logout karna
+        supabase.auth.sign_out()
+        st.session_state.user = None
+        st.session_state.show_loading = False
+        
+        st.success("Aapka account aur data delete ho gaya hai.")
+        time.sleep(1)
+        st.rerun()
+    # 👆👆 ============================== 👆👆
+
+# =========================================================
+# FOOTER
+# =========================================================
+st.divider()
+st.caption("Sankalp • One decision at a time.")
+
+
 
 # =========================================================
 # FOOTER
