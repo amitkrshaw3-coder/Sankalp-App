@@ -3,8 +3,8 @@ import streamlit as st
 # Page ki setting aur title
 st.set_page_config(page_title="Sankalp App", page_icon="🌿")
 
-# Aapka bheja hua Logo display karna
-st.image("1000094047.png", use_column_width=True)
+# Aapka bheja hua Logo display karna (Error fixed here)
+st.image("1000094047.png", use_container_width=True)
 
 # Main Title aur Subtitle
 st.markdown("<h1 style='text-align: center; color: white;'>S A N K A L P</h1>", unsafe_allow_html=True)
