@@ -7,9 +7,13 @@ def render_timer():
     st.header("⏱️ Focus Mode")
     st.markdown("Minimize distractions. It's time for Deep Work.")
 
+    # NAYA: Session state se user ka naam lena
+    user_name = st.session_state.get("user_name", "Student")
     today_str = str(date.today())
+    
     try:
-        response = supabase.table("daily_tasks").select("*").eq("target_date", today_str).eq("status", False).execute()
+        # NAYA: .eq("user_name", user_name) add kiya
+        response = supabase.table("daily_tasks").select("*").eq("user_name", user_name).eq("target_date", today_str).eq("status", False).execute()
         tasks = response.data
     except Exception as e:
         tasks = []
@@ -33,14 +37,11 @@ def render_timer():
 
     start_button = st.button("🚀 Start Focus Session")
 
-    # --- SESSION STATE SETUP ---
-    # Yeh app ko yaad rakhne mein madad karega ki session abhi khatam hua hai
     if "session_completed" not in st.session_state:
         st.session_state.session_completed = False
         st.session_state.completed_task_id = None
         st.session_state.completed_task_name = None
 
-    # --- TIMER LOGIC ---
     if start_button:
         task_id = task_options[selected_task_name]
         st.write(f"### Focusing on: **{selected_task_name}**")
@@ -59,8 +60,9 @@ def render_timer():
             time.sleep(1)
         
         try:
-            # Time save karna
+            # NAYA: "user_name" ke sath data save karna
             supabase.table("study_sessions").insert({
+                "user_name": user_name,
                 "task_id": task_id,
                 "duration_minutes": minutes,
                 "session_date": str(date.today())
@@ -68,40 +70,33 @@ def render_timer():
             
             st.balloons()
             st.success(f"✅ {minutes} minutes added to today's study time!")
-            
-            # Timer khatam hone par state update karna taaki feedback buttons dikhein
             st.session_state.session_completed = True
             st.session_state.completed_task_id = task_id
             st.session_state.completed_task_name = selected_task_name
-            st.rerun() # App refresh karo taaki aage ka UI load ho
+            st.rerun()
             
         except Exception as e:
             st.error(f"Error saving session: {e}")
 
-    # --- POST SESSION FEEDBACK (NAYA CODE) ---
     if st.session_state.session_completed:
         st.markdown("---")
         st.subheader("🎯 Session Complete!")
         st.write(f"Did you complete the target for: **{st.session_state.completed_task_name}**?")
         
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             if st.button("✅ Yes, Completed"):
-                # Database mein task ko TRUE mark kar do
                 supabase.table("daily_tasks").update({"status": True}).eq("task_id", st.session_state.completed_task_id).execute()
                 st.success("Awesome! Task marked as done.")
-                st.session_state.session_completed = False # Reset state
+                st.session_state.session_completed = False
                 time.sleep(1.5)
-                st.rerun() # Refresh karke dashboard jaane ke liye ready
-                
+                st.rerun()
         with col2:
             if st.button("🟡 Partially Done"):
                 st.info("Good effort! Keep it up in the next session.")
                 st.session_state.session_completed = False
                 time.sleep(1.5)
                 st.rerun()
-                
         with col3:
             if st.button("❌ No, Got Distracted"):
                 st.warning("No worries. Take a break and try again later.")
