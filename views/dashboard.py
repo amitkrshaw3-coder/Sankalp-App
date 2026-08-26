@@ -12,9 +12,11 @@ def render_dashboard():
     else:
         greeting = "Good Evening"
         
-    user_name = st.session_state.get("user_name", "Student")
+        user_name = st.session_state.get("user_name", "Student") # Yeh database filtering ke liye
+    display_name = st.session_state.get("display_name", "Student") # Yeh dikhane ke liye
     
-    st.title(f"{greeting}, {user_name} 👋")
+    st.title(f"{greeting}, {display_name} 👋")
+
     
     # 🔥 NAYA DEBUG INDICATOR: Yeh confirm karega ki code update hua hai aur filter lag gaya hai
     st.info(f"🔍 **System Check:** Fetching secure database records ONLY for **{user_name}**.")
