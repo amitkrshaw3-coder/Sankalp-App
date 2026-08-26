@@ -3,6 +3,7 @@ from datetime import date, datetime
 from utils.db_supabase import supabase
 
 def render_dashboard():
+    # --- 1. Dynamic Greeting ---
     current_hour = datetime.now().hour
     if current_hour < 12:
         greeting = "Good Morning"
@@ -14,19 +15,20 @@ def render_dashboard():
     user_name = st.session_state.get("user_name", "Student")
     
     st.title(f"{greeting}, {user_name} 👋")
-    st.markdown("Here is your battle plan for today.")
+    
+    # 🔥 NAYA DEBUG INDICATOR: Yeh confirm karega ki code update hua hai aur filter lag gaya hai
+    st.info(f"🔍 **System Check:** Fetching secure database records ONLY for **{user_name}**.")
 
     today_str = str(date.today())
 
     # --- 2. Study Time Calculation ---
     total_minutes = 0
     try:
-        # FILTER YAHAN HAI: .eq("user_name", user_name)
         session_response = supabase.table("study_sessions").select("duration_minutes").eq("user_name", user_name).eq("session_date", today_str).execute()
         if session_response.data:
             total_minutes = sum(session['duration_minutes'] for session in session_response.data)
     except Exception as e:
-        pass
+        st.error(f"Database Error (Time): {e}")
 
     hours = total_minutes // 60
     mins = total_minutes % 60
@@ -39,7 +41,6 @@ def render_dashboard():
     tasks = []
 
     try:
-        # MAIN FILTER YAHAN HAI: .eq("user_name", user_name)
         task_response = supabase.table("daily_tasks").select("*").eq("user_name", user_name).eq("target_date", today_str).execute()
         tasks = task_response.data
         if tasks:
@@ -48,18 +49,17 @@ def render_dashboard():
             if total_tasks > 0:
                 progress_percentage = int((completed_tasks / total_tasks) * 100)
     except Exception as e:
-        pass
+        st.error(f"Database Error (Tasks): {e}")
 
     # --- 4. Avg Accuracy Calculation ---
     avg_accuracy = 0
     try:
-        # FILTER YAHAN HAI: .eq("user_name", user_name)
         acc_response = supabase.table("test_results").select("accuracy").eq("user_name", user_name).execute()
         if acc_response.data:
             total_acc = sum(test['accuracy'] for test in acc_response.data)
             avg_accuracy = int(total_acc / len(acc_response.data))
     except Exception as e:
-        pass
+        st.error(f"Database Error (Accuracy): {e}")
 
     # --- Top Level Metrics ---
     col1, col2, col3 = st.columns(3)
