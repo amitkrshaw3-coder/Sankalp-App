@@ -42,19 +42,27 @@ if 'pending_user' not in st.session_state:
     st.session_state.pending_user = None
 
 # =========================================================
-# SEPARATE LOADING PAGE (10 SECONDS ANIMATION)
+# SEPARATE LOADING PAGE (STYLISH TEXT INSTEAD OF LOGO)
 # =========================================================
 def loading_screen():
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    # 👇 Yahan column ratio change kiya hai taaki logo chota aur center mein rahe
-    col1, col2, col3 = st.columns([5, 1.5, 5])
-    with col2:
-        st.image("1000094047.png", use_container_width=True)
-        
-    st.markdown("<h2 style='text-align: center; color: #4CAF50;'>Login Successful!</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #777;'>Dashboard secure kiya ja raha hai, kripya pratiksha karein...</p>", unsafe_allow_html=True)
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     
-    progress_text = "System load ho raha hai..."
+    # Stylish Bold & Center SANKALP Text (Logo hata diya gaya hai)
+    st.markdown("""
+        <h1 style='text-align: center; 
+                   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
+                   font-weight: 900; 
+                   font-size: 52px; 
+                   letter-spacing: 6px; 
+                   color: #2e7d32; 
+                   margin-bottom: 0px;'>
+            SANKALP
+        </h1>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<p style='text-align: center; color: #666; font-size: 16px; margin-top: 5px;'>Build discipline. Regain control.</p><br>", unsafe_allow_html=True)
+    
+    progress_text = "System secure kiya ja raha hai..."
     my_bar = st.progress(0, text=progress_text)
     
     for percent_complete in range(100):
@@ -70,10 +78,10 @@ def loading_screen():
 # LOGIN / SIGNUP PAGE
 # =========================================================
 def login_page():
-    # 👇 Yahan column ratio change kiya hai taaki logo chota aur center mein rahe
-    col1, col2, col3 = st.columns([5, 1.5, 5])
+    # Logo ka size chhota karne ke liye width=100 aur [3, 1, 3] ratio use kiya hai
+    col1, col2, col3 = st.columns([3, 1, 3])
     with col2:
-        st.image("1000094047.png", use_container_width=True)
+        st.image("1000094047.png", width=100)
         
     st.markdown("<h2 style='text-align: center;'>🔐 Sankalp - Login</h2>", unsafe_allow_html=True)
     
