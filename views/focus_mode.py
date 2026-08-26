@@ -1,4 +1,3 @@
-
 import streamlit as st
 import time
 from datetime import date
@@ -39,6 +38,9 @@ def render_timer():
     start_button = st.button("🚀 Start Focus Session")
 
     if start_button:
+        # 1. Jo task select kiya gaya hai, uska ID nikal rahe hain
+        task_id = task_options[selected_task_name]
+        
         st.write(f"### Focusing on: **{selected_task_name}**")
         
         # UI Timer Placeholder
@@ -65,4 +67,13 @@ def render_timer():
         st.success("Session Complete! Great job. Take a short break.")
         st.balloons()
         
-        # Next step (future): Yahan hum database mein session save karenge taaki dashboard par total study time update ho
+        # 2. Timer khatam hone ke baad data ko Supabase mein save karna
+        try:
+            supabase.table("study_sessions").insert({
+                "task_id": task_id,
+                "duration_minutes": minutes,
+                "session_date": str(date.today())
+            }).execute()
+            st.info(f"✅ {minutes} minutes successfully added to today's study time in database!")
+        except Exception as e:
+            st.error(f"Error saving session to database: {e}")
