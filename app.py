@@ -1,90 +1,876 @@
 import streamlit as st
+import sqlite3
+from datetime import datetime, date, timedelta
+import time
+import hashlib
 
-# 1. Page Config (Dark Mode / Clean Look)
-st.set_page_config(page_title="Sankalp App", page_icon="🌿", layout="centered")
+# =========================================================
+# SANKALP V2
+# Functional Recovery & Habit Tracking MVP
+# =========================================================
 
-# --- SIDEBAR NAVIGATION (Pages You Should Build wale section se inspired) ---
-st.sidebar.image("1000094047.png", width=100)
-st.sidebar.title("SANKALP")
-page = st.sidebar.radio("Navigation", ["Dashboard", "Urge Help", "Recovery Journal", "Settings"])
+st.set_page_config(
+    page_title="Sankalp",
+    page_icon="🧭",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# ==========================================
-# PAGE 1: MAIN DASHBOARD (Home Screen)
-# ==========================================
-if page == "Dashboard":
-    # Logo and Header
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-         st.image("1000094047.png", use_container_width=True)
-         
-    st.markdown("<h1 style='text-align: center; margin-bottom: 0px;'>S A N K A L P</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #81C784; font-size: 18px;'>Take back control of your mind.</p>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: gray;'>Day 12 • Stay Strong</p>", unsafe_allow_html=True)
-    
-    st.write("---")
+DB_NAME = "sankalp.db"
 
-    # 1. Current Streak Section
-    st.markdown("### 🔥 Current Streak")
-    st.markdown("<h1 style='color: #4CAF50; font-size: 3.5rem; margin-top: -15px;'>12 Days</h1>", unsafe_allow_html=True)
-    st.caption("Keep going — you're building discipline.")
 
-    # 2. Metrics Section (Mind Score & Urges)
-    m1, m2 = st.columns(2)
-    with m1:
-        st.metric(label="🧠 Mind Score", value="92%")
-    with m2:
-        st.metric(label="⚠️ Urges Today", value="1")
+# =========================================================
+# DATABASE
+# =========================================================
 
-    st.write("---")
+def get_db():
+    conn = sqlite3.connect(DB_NAME, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    # 3. Urge Button Section (When an urge hits)
-    st.markdown("### 🚨 When an urge hits")
-    st.info("Breathe • Delay • Move • Win")
-    
-    btn1, btn2 = st.columns(2)
-    with btn1:
-        st.button("🏃 Start Exercise", use_container_width=True, type="primary")
-    with btn2:
-        st.button("📞 Call Partner", use_container_width=True)
 
-    st.write("---")
+conn = get_db()
 
-    # 4. Today's Growth
-    st.markdown("### 🌱 Today's Growth")
-    st.checkbox("📘 Read 10 pages")
-    st.caption("Small wins beat strong urges.")
 
-    st.write("---")
+def init_db():
+    cursor = conn.cursor()
 
-    # 5. Recovery Toolkit
-    st.markdown("### 🛠️ Recovery Toolkit")
-    tk1, tk2, tk3 = st.columns(3)
-    with tk1:
-        st.button("🧘 Meditate", use_container_width=True)
-    with tk2:
-        st.button("📓 Journal", use_container_width=True)
-    with tk3:
-        st.button("🎯 Goals", use_container_width=True)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user (
+            id INTEGER PRIMARY KEY,
+            name TEXT DEFAULT 'User',
+            start_date TEXT,
+            best_streak INTEGER DEFAULT 0
+        )
+    """)
 
-# ==========================================
-# PAGE 2: URGE HELP (Panic Button Page)
-# ==========================================
-elif page == "Urge Help":
-    st.title("🚨 Emergency Urge Help")
-    st.warning("Take a deep breath. You are stronger than your urges. Wait for 10 minutes before making any decision.")
-    st.video("https://www.youtube.com/watch?v=inpok4MKVLM") # Calm breathing video example
-    st.button("I feel better now, back to Dashboard")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS checkins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT UNIQUE,
+            mood INTEGER,
+            urge INTEGER,
+            trigger TEXT,
+            exercise INTEGER DEFAULT 0,
+            meditation INTEGER DEFAULT 0,
+            journal INTEGER DEFAULT 0,
+            relapse INTEGER DEFAULT 0
+        )
+    """)
 
-# ==========================================
-# PAGE 3 & 4: PLACEHOLDERS
-# ==========================================
-elif page == "Recovery Journal":
-    st.title("📓 Recovery Journal")
-    st.text_area("Write your daily thoughts, mood tracking, and triggers here...")
-    st.button("Save Entry")
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS journal (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            entry TEXT
+        )
+    """)
 
-elif page == "Settings":
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS urges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            intensity INTEGER,
+            trigger TEXT,
+            resisted INTEGER DEFAULT 0
+        )
+    """)
+
+    # Create default user
+    cursor.execute("SELECT COUNT(*) FROM user")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("""
+            INSERT INTO user (id, name, start_date, best_streak)
+            VALUES (1, 'User', ?, 0)
+        """, (date.today().isoformat(),))
+
+    conn.commit()
+
+
+init_db()
+
+
+# =========================================================
+# HELPERS
+# =========================================================
+
+def today():
+    return date.today().isoformat()
+
+
+def get_user():
+    return conn.execute(
+        "SELECT * FROM user WHERE id = 1"
+    ).fetchone()
+
+
+def get_checkin(checkin_date=None):
+    checkin_date = checkin_date or today()
+
+    return conn.execute(
+        "SELECT * FROM checkins WHERE date = ?",
+        (checkin_date,)
+    ).fetchone()
+
+
+def save_checkin(
+    mood,
+    urge,
+    trigger,
+    exercise,
+    meditation,
+    journal_done,
+    relapse
+):
+    conn.execute("""
+        INSERT INTO checkins
+        (date, mood, urge, trigger, exercise, meditation, journal, relapse)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+            mood = excluded.mood,
+            urge = excluded.urge,
+            trigger = excluded.trigger,
+            exercise = excluded.exercise,
+            meditation = excluded.meditation,
+            journal = excluded.journal,
+            relapse = excluded.relapse
+    """, (
+        today(),
+        mood,
+        urge,
+        trigger,
+        int(exercise),
+        int(meditation),
+        int(journal_done),
+        int(relapse)
+    ))
+
+    conn.commit()
+
+
+def calculate_streak():
+    rows = conn.execute("""
+        SELECT date, relapse
+        FROM checkins
+        WHERE date <= ?
+        ORDER BY date DESC
+    """, (today(),)).fetchall()
+
+    if not rows:
+        user = get_user()
+        start = datetime.fromisoformat(user["start_date"]).date()
+
+        return max(0, (date.today() - start).days + 1)
+
+    streak = 0
+    current = date.today()
+
+    row_dict = {row["date"]: row["relapse"] for row in rows}
+
+    while True:
+        d = current.isoformat()
+
+        if d in row_dict and row_dict[d] == 1:
+            break
+
+        streak += 1
+        current -= timedelta(days=1)
+
+        # Avoid counting days before user's start date
+        user = get_user()
+        start_date = datetime.fromisoformat(
+            user["start_date"]
+        ).date()
+
+        if current < start_date:
+            break
+
+    return streak
+
+
+def calculate_best_streak():
+    rows = conn.execute("""
+        SELECT date, relapse
+        FROM checkins
+        ORDER BY date ASC
+    """).fetchall()
+
+    if not rows:
+        return 0
+
+    best = 0
+    current_streak = 0
+    previous_date = None
+
+    for row in rows:
+
+        d = datetime.fromisoformat(row["date"]).date()
+
+        if row["relapse"] == 1:
+            current_streak = 0
+            previous_date = d
+            continue
+
+        if previous_date is not None:
+            if d == previous_date + timedelta(days=1):
+                current_streak += 1
+            else:
+                current_streak = 1
+        else:
+            current_streak = 1
+
+        best = max(best, current_streak)
+        previous_date = d
+
+    return best
+
+
+def total_clean_days():
+    return conn.execute("""
+        SELECT COUNT(*)
+        FROM checkins
+        WHERE relapse = 0
+    """).fetchone()[0]
+
+
+def total_resisted_urges():
+    return conn.execute("""
+        SELECT COUNT(*)
+        FROM urges
+        WHERE resisted = 1
+    """).fetchone()[0]
+
+
+def save_urge(intensity, trigger, resisted):
+    conn.execute("""
+        INSERT INTO urges
+        (date, intensity, trigger, resisted)
+        VALUES (?, ?, ?, ?)
+    """, (
+        today(),
+        intensity,
+        trigger,
+        int(resisted)
+    ))
+
+    conn.commit()
+
+
+def save_journal(entry):
+    conn.execute("""
+        INSERT INTO journal (date, entry)
+        VALUES (?, ?)
+    """, (
+        today(),
+        entry
+    ))
+
+    conn.commit()
+
+
+def reset_streak():
+    conn.execute(
+        "UPDATE user SET start_date = ?, best_streak = 0 WHERE id = 1",
+        (today(),)
+    )
+
+    conn.commit()
+
+
+# =========================================================
+# CSS
+# =========================================================
+
+st.markdown("""
+<style>
+
+.main-title {
+    font-size: 42px;
+    font-weight: 800;
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.subtitle {
+    text-align: center;
+    color: #777;
+    font-size: 18px;
+    margin-bottom: 30px;
+}
+
+.card {
+    padding: 20px;
+    border-radius: 18px;
+    border: 1px solid rgba(128,128,128,0.25);
+    margin-bottom: 15px;
+}
+
+.big-number {
+    font-size: 38px;
+    font-weight: 800;
+}
+
+.small-text {
+    color: #777;
+}
+
+.urge-box {
+    padding: 25px;
+    border-radius: 20px;
+    text-align: center;
+    border: 2px solid rgba(255,80,80,0.35);
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+# =========================================================
+# SESSION STATE
+# =========================================================
+
+if "page" not in st.session_state:
+    st.session_state.page = "Dashboard"
+
+
+# =========================================================
+# SIDEBAR
+# =========================================================
+
+with st.sidebar:
+
+    st.markdown("## 🧭 Sankalp")
+
+    if st.button("🏠 Dashboard", use_container_width=True):
+        st.session_state.page = "Dashboard"
+
+    if st.button("🚨 Urge Rescue", use_container_width=True):
+        st.session_state.page = "Urge Rescue"
+
+    if st.button("📔 Journal", use_container_width=True):
+        st.session_state.page = "Journal"
+
+    if st.button("📊 Progress", use_container_width=True):
+        st.session_state.page = "Progress"
+
+    if st.button("⚙️ Settings", use_container_width=True):
+        st.session_state.page = "Settings"
+
+    st.divider()
+
+    st.caption("Sankalp V2")
+    st.caption("Build discipline. Regain control.")
+
+
+# =========================================================
+# DASHBOARD
+# =========================================================
+
+if st.session_state.page == "Dashboard":
+
+    st.markdown(
+        '<p class="main-title">🧭 SANKALP</p>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown(
+        '<p class="subtitle">Take back your control.</p>',
+        unsafe_allow_html=True
+    )
+
+    current_streak = calculate_streak()
+    best_streak = calculate_best_streak()
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        st.metric("🔥 Current Streak", f"{current_streak} days")
+
+    with c2:
+        st.metric("🏆 Best Streak", f"{best_streak} days")
+
+    with c3:
+        st.metric("🌱 Clean Days", total_clean_days())
+
+    with c4:
+        st.metric("🛡️ Urges Resisted", total_resisted_urges())
+
+    st.divider()
+
+    # Emergency button
+
+    st.markdown("""
+    <div class="urge-box">
+
+    <h2>🚨 Having an urge?</h2>
+
+    <p>You don't need to fight the entire day.</p>
+    <p>Just win the next few minutes.</p>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+    if st.button(
+        "🚨 I HAVE AN URGE",
+        type="primary",
+        use_container_width=True
+    ):
+        st.session_state.page = "Urge Rescue"
+        st.rerun()
+
+    st.divider()
+
+    st.subheader("🌱 Today's Check-in")
+
+    existing = get_checkin()
+
+    with st.form("daily_checkin"):
+
+        mood = st.slider(
+            "😊 How are you feeling today?",
+            1,
+            10,
+            existing["mood"] if existing else 7
+        )
+
+        urge = st.slider(
+            "🔥 Urge intensity",
+            0,
+            10,
+            existing["urge"] if existing else 0
+        )
+
+        trigger = st.selectbox(
+            "What was your biggest trigger?",
+            [
+                "None",
+                "Boredom",
+                "Loneliness",
+                "Stress",
+                "Anxiety",
+                "Social Media",
+                "Being alone",
+                "Late night",
+                "Other"
+            ]
+        )
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            exercise = st.checkbox(
+                "🏃 Exercise",
+                value=bool(existing["exercise"]) if existing else False
+            )
+
+        with col2:
+            meditation = st.checkbox(
+                "🧘 Meditation",
+                value=bool(existing["meditation"]) if existing else False
+            )
+
+        with col3:
+            journal_done = st.checkbox(
+                "📔 Journal",
+                value=bool(existing["journal"]) if existing else False
+            )
+
+        relapse = st.checkbox(
+            "I relapsed today"
+        )
+
+        submitted = st.form_submit_button(
+            "Save Today's Check-in",
+            use_container_width=True
+        )
+
+        if submitted:
+
+            save_checkin(
+                mood,
+                urge,
+                trigger,
+                exercise,
+                meditation,
+                journal_done,
+                relapse
+            )
+
+            st.success("Today's check-in saved successfully.")
+            st.rerun()
+
+    st.divider()
+
+    st.subheader("💡 Today's Reminder")
+
+    reminders = [
+        "An urge is temporary. Your decision doesn't have to be.",
+        "You don't need motivation. You need one good decision.",
+        "Protect your attention. Protect your future.",
+        "One clean day at a time.",
+        "Discipline becomes easier when repeated."
+    ]
+
+    import random
+
+    st.info(random.choice(reminders))
+
+
+# =========================================================
+# URGE RESCUE
+# =========================================================
+
+elif st.session_state.page == "Urge Rescue":
+
+    st.title("🚨 Urge Rescue")
+
+    st.write(
+        "Don't negotiate with the urge. "
+        "Give yourself a few minutes and let the intensity come down."
+    )
+
+    st.divider()
+
+    st.subheader("Step 1 — Identify the urge")
+
+    intensity = st.slider(
+        "How strong is the urge right now?",
+        0,
+        10,
+        5
+    )
+
+    trigger = st.selectbox(
+        "What triggered it?",
+        [
+            "Boredom",
+            "Loneliness",
+            "Stress",
+            "Social Media",
+            "Being alone",
+            "Late night",
+            "Random thought",
+            "Other"
+        ]
+    )
+
+    st.divider()
+
+    st.subheader("Step 2 — 60 Second Breathing")
+
+    st.write(
+        "Inhale slowly for 4 seconds, "
+        "hold for 2 seconds, "
+        "then exhale for 6 seconds."
+    )
+
+    if st.button(
+        "▶ Start 60 Second Rescue",
+        type="primary",
+        use_container_width=True
+    ):
+
+        progress = st.progress(0)
+        timer_text = st.empty()
+
+        for i in range(60):
+
+            remaining = 60 - i
+
+            timer_text.markdown(
+                f"<h1 style='text-align:center'>{remaining}</h1>",
+                unsafe_allow_html=True
+            )
+
+            progress.progress((i + 1) / 60)
+
+            time.sleep(1)
+
+        timer_text.success(
+            "60 seconds completed. The urge does not control you."
+        )
+
+    st.divider()
+
+    st.subheader("Step 3 — Change your environment")
+
+    st.write("Choose one:")
+
+    a, b, c = st.columns(3)
+
+    with a:
+        st.button("🚶 Go for a walk")
+
+    with b:
+        st.button("💪 Do 20 push-ups")
+
+    with c:
+        st.button("📵 Leave the phone")
+
+    st.divider()
+
+    st.subheader("Step 4 — What happened?")
+
+    r1, r2 = st.columns(2)
+
+    with r1:
+        if st.button(
+            "🛡️ I RESISTED",
+            use_container_width=True
+        ):
+            save_urge(intensity, trigger, True)
+            st.success(
+                "Excellent. You successfully rode out the urge."
+            )
+
+    with r2:
+        if st.button(
+            "➡️ Still struggling",
+            use_container_width=True
+        ):
+            save_urge(intensity, trigger, False)
+            st.warning(
+                "That's okay. Change your environment and repeat the rescue process."
+            )
+
+
+# =========================================================
+# JOURNAL
+# =========================================================
+
+elif st.session_state.page == "Journal":
+
+    st.title("📔 Recovery Journal")
+
+    st.write(
+        "Write honestly. This journal is for understanding yourself, "
+        "not judging yourself."
+    )
+
+    entry = st.text_area(
+        "Today's thoughts",
+        height=220,
+        placeholder=(
+            "What happened today?\n"
+            "What triggered you?\n"
+            "What helped you?\n"
+            "What will you do differently tomorrow?"
+        )
+    )
+
+    if st.button(
+        "💾 Save Journal Entry",
+        type="primary",
+        use_container_width=True
+    ):
+
+        if entry.strip():
+
+            save_journal(entry)
+
+            st.success("Journal entry saved.")
+
+        else:
+            st.warning("Please write something first.")
+
+    st.divider()
+
+    st.subheader("Previous Entries")
+
+    entries = conn.execute("""
+        SELECT *
+        FROM journal
+        ORDER BY id DESC
+        LIMIT 10
+    """).fetchall()
+
+    if not entries:
+
+        st.info("No journal entries yet.")
+
+    else:
+
+        for item in entries:
+
+            with st.expander(item["date"]):
+
+                st.write(item["entry"])
+
+
+# =========================================================
+# PROGRESS
+# =========================================================
+
+elif st.session_state.page == "Progress":
+
+    st.title("📊 Your Progress")
+
+    current = calculate_streak()
+    best = calculate_best_streak()
+    clean = total_clean_days()
+    resisted = total_resisted_urges()
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        st.metric(
+            "🔥 Current Streak",
+            f"{current} days"
+        )
+
+        st.metric(
+            "🌱 Clean Days",
+            clean
+        )
+
+    with c2:
+
+        st.metric(
+            "🏆 Best Streak",
+            f"{best} days"
+        )
+
+        st.metric(
+            "🛡️ Urges Resisted",
+            resisted
+        )
+
+    st.divider()
+
+    st.subheader("📅 Recovery Calendar")
+
+    start_date = date.today() - timedelta(days=29)
+
+    calendar_data = []
+
+    for i in range(30):
+
+        d = start_date + timedelta(days=i)
+
+        row = get_checkin(d.isoformat())
+
+        if row is None:
+            status = "⚪"
+
+        elif row["relapse"]:
+            status = "🔴"
+
+        elif row["urge"] >= 7:
+            status = "🟡"
+
+        else:
+            status = "🟢"
+
+        calendar_data.append(
+            f"{d.strftime('%d %b')}: {status}"
+        )
+
+    cols = st.columns(5)
+
+    for i, item in enumerate(calendar_data):
+
+        with cols[i % 5]:
+            st.write(item)
+
+    st.divider()
+
+    st.subheader("🧠 Understanding Your Triggers")
+
+    trigger_rows = conn.execute("""
+        SELECT trigger, COUNT(*) AS total
+        FROM checkins
+        WHERE trigger IS NOT NULL
+        GROUP BY trigger
+        ORDER BY total DESC
+    """).fetchall()
+
+    if trigger_rows:
+
+        for row in trigger_rows:
+
+            st.write(
+                f"**{row['trigger']}** — {row['total']} time(s)"
+            )
+
+    else:
+
+        st.info(
+            "Complete a few daily check-ins to see your patterns."
+        )
+
+
+# =========================================================
+# SETTINGS
+# =========================================================
+
+elif st.session_state.page == "Settings":
+
     st.title("⚙️ Settings")
-    st.write("Smart Porn Blocker Settings:")
-    st.checkbox("Enable DNS Filtering", value=True)
-    st.checkbox("Strict Mode (No override)", value=False)
+
+    user = get_user()
+
+    st.subheader("Profile")
+
+    name = st.text_input(
+        "Your name",
+        value=user["name"]
+    )
+
+    if st.button("Save Profile"):
+
+        conn.execute(
+            "UPDATE user SET name = ? WHERE id = 1",
+            (name,)
+        )
+
+        conn.commit()
+
+        st.success("Profile updated.")
+
+    st.divider()
+
+    st.subheader("🔒 Content Protection")
+
+    st.checkbox(
+        "Enable protection mode",
+        value=False,
+        help=(
+            "This is currently only a UI setting. "
+            "Actual device-level blocking will be implemented "
+            "in the Android version."
+        )
+    )
+
+    st.divider()
+
+    st.subheader("⚠️ Reset")
+
+    st.warning(
+        "Resetting your streak changes the start date. "
+        "Your journal and historical data will remain."
+    )
+
+    if st.button(
+        "Reset Current Streak",
+        type="secondary"
+    ):
+
+        reset_streak()
+
+        st.success(
+            "Your new streak starts today."
+        )
+
+        st.rerun()
+
+
+# =========================================================
+# FOOTER
+# =========================================================
+
+st.divider()
+
+st.caption(
+    "Sankalp • One decision at a time."
+)
