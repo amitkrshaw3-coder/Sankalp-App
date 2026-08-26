@@ -5,10 +5,9 @@ from utils.db_supabase import supabase
 
 st.set_page_config(page_title="Sankalp - Student OS", page_icon="🎯", layout="wide")
 
-# --- NAYA CODE: get_streak ab user_name accept karega aur data filter karega ---
+# --- get_streak ab user_name accept karega aur data filter karega ---
 def get_streak(user_name):
     try:
-        # NAYA: .eq("user_name", user_name) add kiya gaya hai
         response = supabase.table("study_sessions").select("session_date").eq("user_name", user_name).execute()
         if not response.data:
             return 0
@@ -62,6 +61,13 @@ def main():
     # --- Yahan se Main App shuru hota hai (Only for logged in users) ---
     st.sidebar.title("🎯 Sankalp")
     st.sidebar.write(f"👤 **{st.session_state.user_name}**") # Sidebar mein bhi naam dikhega
+    
+    # --- LOGOUT BUTTON ADDED HERE ---
+    if st.sidebar.button("Logout 🚪"):
+        st.session_state.logged_in = False
+        st.session_state.user_name = ""
+        st.rerun()
+        
     st.sidebar.markdown("---")
     
     menu = ["🏠 Dashboard", "📚 Task Engine", "⏱️ Focus Mode", "📊 Analytics"]
@@ -69,7 +75,7 @@ def main():
     
     st.sidebar.markdown("---")
     
-    # NAYA: Function ko call karte waqt user ka naam bhejna hai
+    # Function ko call karte waqt user ka naam bhejna hai
     current_streak = get_streak(st.session_state.user_name)
     
     if current_streak == 0:
