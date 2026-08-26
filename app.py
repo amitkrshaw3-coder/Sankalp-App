@@ -20,8 +20,14 @@ st.set_page_config(
 # =========================================================
 @st.cache_resource
 def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
+    # .strip() lagane se koi bhi extra space ya 'Enter' khud hatt jayega
+    url = st.secrets["SUPABASE_URL"].strip()
+    key = st.secrets["SUPABASE_KEY"].strip()
+    
+    # Agar URL ke aakhir me '/' laga reh gaya ho, toh use bhi hata dega
+    if url.endswith('/'):
+        url = url[:-1]
+        
     return create_client(url, key)
 
 try:
