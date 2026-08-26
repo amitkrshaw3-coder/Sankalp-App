@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime, date, timedelta
 import time
 import hashlib
+import base64
 from supabase import create_client, Client
 
 # =========================================================
@@ -41,23 +42,33 @@ if 'show_loading' not in st.session_state:
 if 'pending_user' not in st.session_state:
     st.session_state.pending_user = None
 
+# Helper to convert image to base64 for absolute center alignment
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except:
+        return ""
+
 # =========================================================
-# SEPARATE LOADING PAGE (STYLISH TEXT INSTEAD OF LOGO)
+# SEPARATE LOADING PAGE (STYLISH TEXT & CENTERED)
 # =========================================================
 def loading_screen():
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     
-    # Stylish Bold & Center SANKALP Text (Logo hata diya gaya hai)
+    # Absolute center aligned BOLD SANKALP text
     st.markdown("""
-        <h1 style='text-align: center; 
-                   font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
-                   font-weight: 900; 
-                   font-size: 52px; 
-                   letter-spacing: 6px; 
-                   color: #2e7d32; 
-                   margin-bottom: 0px;'>
-            SANKALP
-        </h1>
+        <div style="display: flex; justify-content: center; width: 100%;">
+            <h1 style='font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; 
+                       font-weight: 900; 
+                       font-size: 52px; 
+                       letter-spacing: 6px; 
+                       color: #2e7d32; 
+                       text-align: center;
+                       margin-bottom: 0px;'>
+                SANKALP
+            </h1>
+        </div>
     """, unsafe_allow_html=True)
     
     st.markdown("<p style='text-align: center; color: #666; font-size: 16px; margin-top: 5px;'>Build discipline. Regain control.</p><br>", unsafe_allow_html=True)
@@ -78,10 +89,16 @@ def loading_screen():
 # LOGIN / SIGNUP PAGE
 # =========================================================
 def login_page():
-    # Logo ka size chhota karne ke liye width=100 aur [3, 1, 3] ratio use kiya hai
-    col1, col2, col3 = st.columns([3, 1, 3])
-    with col2:
-        st.image("1000094047.png", width=100)
+    # Small size and strictly centered logo using HTML Flexbox
+    img_base64 = get_base64_image("1000094047.png")
+    if img_base64:
+        st.markdown(f"""
+            <div style="display: flex; justify-content: center; align-items: center; width: 100%; margin-bottom: 15px;">
+                <img src="data:image/png;base64,{img_base64}" width="90" style="display: block;">
+            </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.image("1000094047.png", width=90)
         
     st.markdown("<h2 style='text-align: center;'>🔐 Sankalp - Login</h2>", unsafe_allow_html=True)
     
