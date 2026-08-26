@@ -5,9 +5,23 @@ from utils.db_supabase import supabase
 
 st.set_page_config(page_title="Sankalp - Student OS", page_icon="🎯", layout="wide")
 
-def get_streak(user_name):
+# --- SESSION RESTORE LOGIC ---
+# Har baar Streamlit rerun hone par RLS ke liye session set karna zaroori hai
+if st.session_state.get("logged_in") and "access_token" in st.session_state:
     try:
-        response = supabase.table("study_sessions").select("session_date").eq("user_name", user_name).execute()
+        supabase.auth.set_session(
+            st.session_state["access_token"], 
+            st.session_state["refresh_token"]
+        )
+    except Exception:
+        # Agar token expire ho jaye toh logout kar do
+        st.session_state.logged_in = False
+
+def get_streak():
+    try:
+        # RLS enable hone ki wajah se, ye automatically sirf logged-in user ka data layega
+        response = supabase.table("study_sessions").select("session_date").execute()
+        
         if not response.data:
             return 0
             
@@ -31,7 +45,7 @@ def get_streak(user_name):
     except Exception as e:
         return 0
 
-# --- NAYA CODE: Advanced Auth System (Login & Sign Up) ---
+# --- UPDATED AUTH SYSTEM (Supabase Auth) ---
 def auth_page():
     st.title("🔐 Welcome to Sankalp")
     st.markdown("Your Personal Student OS. Please log in or create an account.")
@@ -41,53 +55,58 @@ def auth_page():
     # --- LOGIN TAB ---
     with tab_login:
         with st.form("login_form"):
-            username = st.text_input("Username (Unique ID)")
+            email = st.text_input("Email")
             password = st.text_input("Password", type="password")
             submit_login = st.form_submit_button("Login 🚀")
             
-            if submit_login and username and password:
+            if submit_login and email and password:
                 try:
-                    # Database se user check karna
-                    res = supabase.table("users").select("*").eq("username", username).eq("password", password).execute()
-                    if res.data:
-                        st.session_state.logged_in = True
-                        st.session_state.user_name = username  # Database filtering ke liye Unique ID
-                        st.session_state.display_name = res.data[0]['name']  # Greeting (dikhane) ke liye Asli Naam
-                        st.rerun()
-                    else:
-                        st.error("❌ Invalid username or password.")
+                    # Supabase ki built-in auth api use karna
+                    res = supabase.auth.sign_in_with_password({
+                        "email": email, 
+                        "password": password
+                    })
+                    
+                    st.session_state.logged_in = True
+                    st.session_state.user_id = res.user.id
+                    st.session_state.access_token = res.session.access_token
+                    st.session_state.refresh_token = res.session.refresh_token
+                    # Display name metadata se nikalna (agar set kiya ho toh)
+                    st.session_state.display_name = res.user.user_metadata.get("full_name", email.split("@")[0])
+                    
+                    st.rerun()
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"❌ Login failed: Invalid email or password.")
                     
     # --- SIGN UP TAB ---
     with tab_signup:
         with st.form("signup_form"):
             new_name = st.text_input("Full Name (e.g. Priyanka Sharma)")
-            new_username = st.text_input("Choose a Username (e.g. priyanka_01)")
-            new_password = st.text_input("Choose a Password", type="password")
+            new_email = st.text_input("Email (e.g. priyanka@email.com)")
+            new_password = st.text_input("Choose a Password (min 6 characters)", type="password")
             submit_signup = st.form_submit_button("Sign Up 📝")
             
-            if submit_signup and new_name and new_username and new_password:
+            if submit_signup and new_name and new_email and new_password:
                 try:
-                    # Check karo ki username pehle se toh nahi hai
-                    check_res = supabase.table("users").select("username").eq("username", new_username).execute()
-                    if check_res.data:
-                        st.warning("⚠️ This Username is already taken. Try adding numbers (e.g. priyanka_02).")
-                    else:
-                        # Naya user save karna
-                        supabase.table("users").insert({
-                            "username": new_username,
-                            "name": new_name,
-                            "password": new_password
-                        }).execute()
-                        st.success("✅ Account created successfully! Please go to the 'Login' tab to enter the app.")
+                    # Supabase Auth me naya user create karna aur metadata me naam save karna
+                    res = supabase.auth.sign_up({
+                        "email": new_email,
+                        "password": new_password,
+                        "options": {
+                            "data": {
+                                "full_name": new_name
+                            }
+                        }
+                    })
+                    st.success("✅ Account created successfully! You can now log in.")
                 except Exception as e:
                     st.error(f"Error creating account: {e}")
 
 def main():
+    # Session state initialization
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
-        st.session_state.user_name = ""
+        st.session_state.user_id = ""
         st.session_state.display_name = ""
 
     if not st.session_state.logged_in:
@@ -99,9 +118,11 @@ def main():
     st.sidebar.write(f"👤 **{st.session_state.display_name}**") 
     
     if st.sidebar.button("Logout 🚪"):
-        st.session_state.logged_in = False
-        st.session_state.user_name = ""
-        st.session_state.display_name = ""
+        try:
+            supabase.auth.sign_out()
+        except:
+            pass
+        st.session_state.clear()
         st.rerun()
         
     st.sidebar.markdown("---")
@@ -111,7 +132,7 @@ def main():
     
     st.sidebar.markdown("---")
     
-    current_streak = get_streak(st.session_state.user_name)
+    current_streak = get_streak()
     
     if current_streak == 0:
         st.sidebar.info("🧊 Study Streak: 0 Days. Start today!")
@@ -120,6 +141,7 @@ def main():
     else:
         st.sidebar.success(f"🔥 Study Streak: {current_streak} Days. You're on fire!")
 
+    # Views render karna
     if choice == "🏠 Dashboard":
         dashboard.render_dashboard()
     elif choice == "📚 Task Engine":
