@@ -1,11 +1,10 @@
 import streamlit as st
-from datetime import date, datetime # datetime import add kiya
+from datetime import date, datetime
 from utils.db_supabase import supabase
 
 def render_dashboard():
-    # --- NAYA CODE: Time-based Greeting ---
+    # --- 1. Dynamic Greeting ---
     current_hour = datetime.now().hour
-    
     if current_hour < 12:
         greeting = "Good Morning"
     elif 12 <= current_hour < 17:
@@ -21,15 +20,51 @@ def render_dashboard():
 
     today_str = str(date.today())
 
-    # --- Iske neeche tumhara pehle wala metrics aur progress ka code rahega ---
-    # ... (total_minutes calculation etc.)
+    # --- 2. Study Time Calculation ---
+    total_minutes = 0
+    try:
+        session_response = supabase.table("study_sessions").select("duration_minutes").eq("session_date", today_str).execute()
+        if session_response.data:
+            total_minutes = sum(session['duration_minutes'] for session in session_response.data)
+    except Exception as e:
+        pass
+
+    hours = total_minutes // 60
+    mins = total_minutes % 60
+    study_time_display = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
+
+    # --- 3. Task Progress Calculation (Error Fix Here) ---
+    total_tasks = 0
+    completed_tasks = 0
+    progress_percentage = 0
+    tasks = []
+
+    try:
+        task_response = supabase.table("daily_tasks").select("*").eq("target_date", today_str).execute()
+        tasks = task_response.data
+        if tasks:
+            total_tasks = len(tasks)
+            completed_tasks = sum(1 for task in tasks if task['status'])
+            if total_tasks > 0:
+                progress_percentage = int((completed_tasks / total_tasks) * 100)
+    except Exception as e:
+        pass
+
+    # --- 4. Avg Accuracy Calculation ---
+    avg_accuracy = 0
+    try:
+        acc_response = supabase.table("test_results").select("accuracy").execute()
+        if acc_response.data:
+            total_acc = sum(test['accuracy'] for test in acc_response.data)
+            avg_accuracy = int(total_acc / len(acc_response.data))
+    except Exception as e:
+        pass
 
     # --- Top Level Metrics ---
     col1, col2, col3 = st.columns(3)
-    # Yahan ab percentage aur remaining tasks dynamic ho gaye hain
     col1.metric(label="Today's Progress", value=f"{progress_percentage}%", delta=f"{total_tasks - completed_tasks} tasks remaining", delta_color="inverse")
     col2.metric(label="Study Time", value=study_time_display, delta="Tracked today!")
-    col3.metric(label="Avg Accuracy", value="72%", delta="Coming soon")
+    col3.metric(label="Avg Accuracy", value=f"{avg_accuracy}%", delta="Overall tests") 
 
     st.markdown("---")
     
@@ -47,7 +82,7 @@ def render_dashboard():
                 
                 if is_done != task['status']:
                     supabase.table("daily_tasks").update({"status": is_done}).eq("task_id", task['task_id']).execute()
-                    st.rerun() # Refresh to update percentage automatically
+                    st.rerun()
 
     # --- Performance Bars ---
     with col_perf:
@@ -56,7 +91,7 @@ def render_dashboard():
         st.progress(80) 
         
         st.write(f"**Completion ({progress_percentage}%)**")
-        st.progress(progress_percentage) # Dynamic Progress Bar!
+        st.progress(progress_percentage) 
         
-        st.write("**Accuracy**")
-        st.progress(72) 
+        st.write(f"**Accuracy ({avg_accuracy}%)**")
+        st.progress(avg_accuracy)
