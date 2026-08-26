@@ -40,7 +40,13 @@ if 'user' not in st.session_state:
     st.session_state.user = None
 
 def login_page():
-    st.title("🔐 Sankalp - Login")
+    # 1. Logo dikhane ka code (Center mein lane ke liye columns use kiye hain)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        # Aapka logo yahan show hoga
+        st.image("1000094047.png", use_container_width=True)
+        
+    st.markdown("<h2 style='text-align: center;'>🔐 Sankalp - Login</h2>", unsafe_allow_html=True)
     
     choice = st.radio("Aap kya karna chahte hain?", ["Login", "Naya Account Banayein (Sign Up)"])
     
@@ -58,17 +64,25 @@ def login_page():
     elif choice == "Login":
         if st.button("Login"):
             try:
+                # Pehle Supabase se check karega ki password sahi hai ya nahi
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                st.session_state.user = response.user
+                
+                # Agar password sahi hai, tab 10 second ka loading animation chalega
+                progress_text = "System secure kiya ja raha hai... Kripya pratiksha karein."
+                my_bar = st.progress(0, text=progress_text)
+                
+                # 100 percentage tak jayega, har step mein 0.1 second rukega (Total 10 seconds)
+                for percent_complete in range(100):
+                    time.sleep(0.1) 
+                    my_bar.progress(percent_complete + 1, text=f"Loading... {percent_complete + 1}%")
+                
                 st.success("✅ Login successful!")
+                time.sleep(0.5) # Aadha second ruk kar dashboard khulega
+                
+                st.session_state.user = response.user
                 st.rerun() 
             except Exception as e:
                 st.error("❌ Galat Email ya Password. Kripya dobara check karein.")
-
-# Agar user logged in nahi hai, toh sirf login page dikhao aur aage ka code mat chalao
-if st.session_state.user is None:
-    login_page()
-    st.stop()
 
 
 # =========================================================
