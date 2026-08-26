@@ -344,9 +344,17 @@ if "page" not in st.session_state:
 # =========================================================
 
 with st.sidebar:
+    # Safely email nikalne ka tarika
+    try:
+        if isinstance(st.session_state.user, dict):
+            user_email = st.session_state.user.get("email", "User")
+        else:
+            user_email = getattr(st.session_state.user, "email", "User")
+    except:
+        user_email = "User"
 
-    # --- NAYA LOGOUT BUTTON ADD KIYA HAI ---
-    st.write(f"👤 Logged in as: **{st.session_state.user.email}**")
+    st.write(f"👤 Logged in as: **{user_email}**")
+    
     if st.button("🚪 Logout", type="primary"):
         supabase.auth.sign_out()
         st.session_state.user = None
