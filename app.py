@@ -16,15 +16,13 @@ st.set_page_config(
 )
 
 # =========================================================
-# STEP D: SUPABASE AUTHENTICATION (LOGIN/SIGNUP)
+# STEP D: SUPABASE AUTHENTICATION & SESSION STATES
 # =========================================================
 @st.cache_resource
 def init_connection():
-    # .strip() lagane se koi bhi extra space ya 'Enter' khud hatt jayega
     url = st.secrets["SUPABASE_URL"].strip()
     key = st.secrets["SUPABASE_KEY"].strip()
     
-    # Agar URL ke aakhir me '/' laga reh gaya ho, toh use bhi hata dega
     if url.endswith('/'):
         url = url[:-1]
         
@@ -38,13 +36,46 @@ except Exception as e:
 
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'show_loading' not in st.session_state:
+    st.session_state.show_loading = False
+if 'pending_user' not in st.session_state:
+    st.session_state.pending_user = None
 
-def login_page():
-    # 1. Logo dikhane ka code
-    col1, col2, col3 = st.columns([1, 2, 1])
+# =========================================================
+# SEPARATE LOADING PAGE (10 SECONDS ANIMATION)
+# =========================================================
+def loading_screen():
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([2, 1, 2])
     with col2:
-        # Aapka logo yahan show hoga
-        st.image("1000094047.png", use_container_width=True)
+        # Chhota logo loading screen par
+        st.image("1000094047.png", width=120)
+        
+    st.markdown("<h2 style='text-align: center; color: #4CAF50;'>Login Successful!</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #777;'>Dashboard secure kiya ja raha hai, kripya pratiksha karein...</p>", unsafe_allow_html=True)
+    
+    progress_text = "System load ho raha hai..."
+    my_bar = st.progress(0, text=progress_text)
+    
+    # 100 steps * 0.1 second = Total 10 seconds loading
+    for percent_complete in range(100):
+        time.sleep(0.1) 
+        my_bar.progress(percent_complete + 1, text=f"Loading Dashboard... {percent_complete + 1}%")
+    
+    time.sleep(0.5)
+    # Ab user ko login state mein daal kar dashboard khol denge
+    st.session_state.user = st.session_state.pending_user
+    st.session_state.show_loading = False
+    st.rerun()
+
+# =========================================================
+# LOGIN / SIGNUP PAGE
+# =========================================================
+def login_page():
+    # Logo ka size chhota karne ke liye width=150 set kiya hai aur columns use kiye hain
+    col1, col2, col3 = st.columns([2, 1, 2])
+    with col2:
+        st.image("1000094047.png", width=150)
         
     st.markdown("<h2 style='text-align: center;'>🔐 Sankalp - Login</h2>", unsafe_allow_html=True)
     
@@ -64,31 +95,20 @@ def login_page():
     elif choice == "Login":
         if st.button("Login"):
             try:
-                # Pehle Supabase se check karega ki password sahi hai ya nahi
+                # Credentials check karne ke baad loading screen trigger hogi
                 response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-                
-                # Agar password sahi hai, tab 10 second ka loading animation chalega
-                progress_text = "System secure kiya ja raha hai... Kripya pratiksha karein."
-                my_bar = st.progress(0, text=progress_text)
-                
-                # 100 percentage tak jayega, har step mein 0.1 second rukega (Total 10 seconds)
-                for percent_complete in range(100):
-                    time.sleep(0.1) 
-                    my_bar.progress(percent_complete + 1, text=f"Loading... {percent_complete + 1}%")
-                
-                st.success("✅ Login successful!")
-                time.sleep(0.5) # Aadha second ruk kar dashboard khulega
-                
-                st.session_state.user = response.user
-                st.rerun() 
+                st.session_state.pending_user = response.user
+                st.session_state.show_loading = True
+                st.rerun()
             except Exception as e:
                 st.error("❌ Galat Email ya Password. Kripya dobara check karein.")
 
-# =========================================================
-# YEH LINES MISSING THI - INKI WAJAH SE LOGIN RUKTA HAI
-# =========================================================
+# Gatekeeper logic for Login & Loading Screen
 if st.session_state.user is None:
-    login_page()
+    if st.session_state.show_loading:
+        loading_screen()
+    else:
+        login_page()
     st.stop()
 
 
@@ -351,7 +371,6 @@ if "page" not in st.session_state:
 # =========================================================
 
 with st.sidebar:
-    # Safely email nikalne ka tarika
     try:
         if isinstance(st.session_state.user, dict):
             user_email = st.session_state.user.get("email", "User")
@@ -365,6 +384,7 @@ with st.sidebar:
     if st.button("🚪 Logout", type="primary"):
         supabase.auth.sign_out()
         st.session_state.user = None
+        st.session_state.show_loading = False
         st.rerun()
         
     st.divider()
