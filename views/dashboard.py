@@ -12,7 +12,7 @@ def render_dashboard():
     else:
         greeting = "Good Evening"
         
-    # Session state se user ka naam nikalna
+    # User ka naam nikalna
     user_name = st.session_state.get("user_name", "Student")
     
     st.title(f"{greeting}, {user_name} 👋")
@@ -23,7 +23,8 @@ def render_dashboard():
     # --- 2. Study Time Calculation ---
     total_minutes = 0
     try:
-        session_response = supabase.table("study_sessions").select("duration_minutes").eq("session_date", today_str).execute()
+        # STRICT FILTER: .eq("user_name", user_name)
+        session_response = supabase.table("study_sessions").select("duration_minutes").eq("user_name", user_name).eq("session_date", today_str).execute()
         if session_response.data:
             total_minutes = sum(session['duration_minutes'] for session in session_response.data)
     except Exception as e:
@@ -33,14 +34,15 @@ def render_dashboard():
     mins = total_minutes % 60
     study_time_display = f"{hours}h {mins}m" if hours > 0 else f"{mins}m"
 
-    # --- 3. Task Progress Calculation (Error Fix Here) ---
+    # --- 3. Task Progress Calculation ---
     total_tasks = 0
     completed_tasks = 0
     progress_percentage = 0
     tasks = []
 
     try:
-        task_response = supabase.table("daily_tasks").select("*").eq("target_date", today_str).execute()
+        # STRICT FILTER: .eq("user_name", user_name)
+        task_response = supabase.table("daily_tasks").select("*").eq("user_name", user_name).eq("target_date", today_str).execute()
         tasks = task_response.data
         if tasks:
             total_tasks = len(tasks)
@@ -53,7 +55,8 @@ def render_dashboard():
     # --- 4. Avg Accuracy Calculation ---
     avg_accuracy = 0
     try:
-        acc_response = supabase.table("test_results").select("accuracy").execute()
+        # STRICT FILTER: .eq("user_name", user_name)
+        acc_response = supabase.table("test_results").select("accuracy").eq("user_name", user_name).execute()
         if acc_response.data:
             total_acc = sum(test['accuracy'] for test in acc_response.data)
             avg_accuracy = int(total_acc / len(acc_response.data))
