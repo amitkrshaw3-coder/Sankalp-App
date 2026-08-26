@@ -46,8 +46,8 @@ if 'pending_user' not in st.session_state:
 # =========================================================
 def loading_screen():
     st.markdown("<br><br>", unsafe_allow_html=True)
-    # [4, 2, 4] ratio se middle column perfectly center mein rahega
-    col1, col2, col3 = st.columns([4, 2, 4])
+    # 👇 Yahan column ratio change kiya hai taaki logo chota aur center mein rahe
+    col1, col2, col3 = st.columns([5, 1.5, 5])
     with col2:
         st.image("1000094047.png", use_container_width=True)
         
@@ -70,8 +70,8 @@ def loading_screen():
 # LOGIN / SIGNUP PAGE
 # =========================================================
 def login_page():
-    # [4, 2, 4] ratio se middle column perfectly center mein rahega
-    col1, col2, col3 = st.columns([4, 2, 4])
+    # 👇 Yahan column ratio change kiya hai taaki logo chota aur center mein rahe
+    col1, col2, col3 = st.columns([5, 1.5, 5])
     with col2:
         st.image("1000094047.png", use_container_width=True)
         
@@ -353,7 +353,6 @@ st.markdown("""
 .big-number { font-size: 38px; font-weight: 800; }
 .small-text { color: #777; }
 .urge-box { padding: 25px; border-radius: 20px; text-align: center; border: 2px solid rgba(255,80,80,0.35); }
-/* Make certain specific text green if needed, but config.toml will handle the main theme */
 </style>
 """, unsafe_allow_html=True)
 
