@@ -655,26 +655,36 @@ elif st.session_state.page == "Settings":
         st.rerun()
 
     # 👇👇 NAYA DELETE ACCOUNT SECTION 👇👇
+    # 👇👇 NAYA ASALI DELETE ACCOUNT SECTION 👇👇
     st.divider()
     st.subheader("🗑️ Delete Account")
     st.error("Chetawani: Yeh action wapas nahi liya ja sakta. Aapka saara app data hamesha ke liye delete ho jayega.")
     
     if st.button("Delete My Account", type="primary"):
-        # 1. Database se saara data delete karna
-        conn.execute("DELETE FROM checkins")
-        conn.execute("DELETE FROM journal")
-        conn.execute("DELETE FROM urges")
-        conn.commit()
-        reset_streak()
-        
-        # 2. User ko Supabase se logout karna
-        supabase.auth.sign_out()
-        st.session_state.user = None
-        st.session_state.show_loading = False
-        
-        st.success("Aapka account aur data delete ho gaya hai.")
-        time.sleep(1)
-        st.rerun()
+        try:
+            # 1. Supabase server se account ko permanently udana (Naye function ke zariye)
+            supabase.rpc('delete_user').execute()
+            
+            # 2. Local database (SQLite) se saara data clear karna
+            conn.execute("DELETE FROM checkins")
+            conn.execute("DELETE FROM journal")
+            conn.execute("DELETE FROM urges")
+            conn.commit()
+            reset_streak()
+            
+            # 3. App se logout karna
+            supabase.auth.sign_out()
+            st.session_state.user = None
+            st.session_state.show_loading = False
+            
+            st.success("✅ Aapka account permanently delete ho gaya hai!")
+            time.sleep(1.5)
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"Account delete karne mein error aayi: {e}")
+    # 👆👆 ============================== 👆👆
+
     # 👆👆 ============================== 👆👆
 
 # =========================================================
