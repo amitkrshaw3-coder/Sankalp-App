@@ -3,7 +3,6 @@ from datetime import date, datetime
 from utils.db_supabase import supabase
 
 def render_dashboard():
-    # --- 1. Dynamic Greeting ---
     current_hour = datetime.now().hour
     if current_hour < 12:
         greeting = "Good Morning"
@@ -22,6 +21,7 @@ def render_dashboard():
     # --- 2. Study Time Calculation ---
     total_minutes = 0
     try:
+        # FILTER YAHAN HAI: .eq("user_name", user_name)
         session_response = supabase.table("study_sessions").select("duration_minutes").eq("user_name", user_name).eq("session_date", today_str).execute()
         if session_response.data:
             total_minutes = sum(session['duration_minutes'] for session in session_response.data)
@@ -39,6 +39,7 @@ def render_dashboard():
     tasks = []
 
     try:
+        # MAIN FILTER YAHAN HAI: .eq("user_name", user_name)
         task_response = supabase.table("daily_tasks").select("*").eq("user_name", user_name).eq("target_date", today_str).execute()
         tasks = task_response.data
         if tasks:
@@ -52,6 +53,7 @@ def render_dashboard():
     # --- 4. Avg Accuracy Calculation ---
     avg_accuracy = 0
     try:
+        # FILTER YAHAN HAI: .eq("user_name", user_name)
         acc_response = supabase.table("test_results").select("accuracy").eq("user_name", user_name).execute()
         if acc_response.data:
             total_acc = sum(test['accuracy'] for test in acc_response.data)
