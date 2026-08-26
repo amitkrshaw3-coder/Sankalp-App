@@ -5,9 +5,11 @@ from utils.db_supabase import supabase
 
 st.set_page_config(page_title="Sankalp - Student OS", page_icon="🎯", layout="wide")
 
-def get_streak():
+# --- NAYA CODE: get_streak ab user_name accept karega aur data filter karega ---
+def get_streak(user_name):
     try:
-        response = supabase.table("study_sessions").select("session_date").execute()
+        # NAYA: .eq("user_name", user_name) add kiya gaya hai
+        response = supabase.table("study_sessions").select("session_date").eq("user_name", user_name).execute()
         if not response.data:
             return 0
             
@@ -31,7 +33,7 @@ def get_streak():
     except Exception as e:
         return 0
 
-# --- NAYA CODE: Login Page UI ---
+# --- Login Page UI ---
 def login_page():
     st.title("🔐 Welcome to Sankalp")
     st.markdown("Please log in to your Student OS.")
@@ -67,7 +69,9 @@ def main():
     
     st.sidebar.markdown("---")
     
-    current_streak = get_streak()
+    # NAYA: Function ko call karte waqt user ka naam bhejna hai
+    current_streak = get_streak(st.session_state.user_name)
+    
     if current_streak == 0:
         st.sidebar.info("🧊 Study Streak: 0 Days. Start today!")
     elif current_streak < 3:
