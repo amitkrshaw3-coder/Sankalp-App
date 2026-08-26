@@ -12,14 +12,11 @@ def render_dashboard():
     else:
         greeting = "Good Evening"
         
-        user_name = st.session_state.get("user_name", "Student") # Yeh database filtering ke liye
-    display_name = st.session_state.get("display_name", "Student") # Yeh dikhane ke liye
+    user_name = st.session_state.get("user_name", "Student")       # Database filter ke liye
+    display_name = st.session_state.get("display_name", user_name) # Screen par dikhane ke liye
     
     st.title(f"{greeting}, {display_name} 👋")
-
-    
-    # 🔥 NAYA DEBUG INDICATOR: Yeh confirm karega ki code update hua hai aur filter lag gaya hai
-    st.info(f"🔍 **System Check:** Fetching secure database records ONLY for **{user_name}**.")
+    st.markdown("Here is your battle plan for today.")
 
     today_str = str(date.today())
 
@@ -30,7 +27,7 @@ def render_dashboard():
         if session_response.data:
             total_minutes = sum(session['duration_minutes'] for session in session_response.data)
     except Exception as e:
-        st.error(f"Database Error (Time): {e}")
+        pass
 
     hours = total_minutes // 60
     mins = total_minutes % 60
@@ -51,7 +48,7 @@ def render_dashboard():
             if total_tasks > 0:
                 progress_percentage = int((completed_tasks / total_tasks) * 100)
     except Exception as e:
-        st.error(f"Database Error (Tasks): {e}")
+        pass
 
     # --- 4. Avg Accuracy Calculation ---
     avg_accuracy = 0
@@ -61,7 +58,7 @@ def render_dashboard():
             total_acc = sum(test['accuracy'] for test in acc_response.data)
             avg_accuracy = int(total_acc / len(acc_response.data))
     except Exception as e:
-        st.error(f"Database Error (Accuracy): {e}")
+        pass
 
     # --- Top Level Metrics ---
     col1, col2, col3 = st.columns(3)
