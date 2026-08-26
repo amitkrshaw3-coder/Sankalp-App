@@ -5,7 +5,6 @@ from utils.db_supabase import supabase
 
 st.set_page_config(page_title="Sankalp - Student OS", page_icon="🎯", layout="wide")
 
-# --- get_streak ab user_name accept karega aur data filter karega ---
 def get_streak(user_name):
     try:
         response = supabase.table("study_sessions").select("session_date").eq("user_name", user_name).execute()
@@ -32,40 +31,77 @@ def get_streak(user_name):
     except Exception as e:
         return 0
 
-# --- Login Page UI ---
-def login_page():
+# --- NAYA CODE: Advanced Auth System (Login & Sign Up) ---
+def auth_page():
     st.title("🔐 Welcome to Sankalp")
-    st.markdown("Please log in to your Student OS.")
+    st.markdown("Your Personal Student OS. Please log in or create an account.")
     
-    with st.form("login_form"):
-        name = st.text_input("Enter your Name", placeholder="e.g. Amit")
-        submit = st.form_submit_button("Enter App 🚀")
-        
-        if submit and name:
-            # User ka naam session mein save kar liya
-            st.session_state.logged_in = True
-            st.session_state.user_name = name
-            st.rerun() # App ko refresh karo taaki dashboard khule
+    tab_login, tab_signup = st.tabs(["Login", "Create Account"])
+    
+    # --- LOGIN TAB ---
+    with tab_login:
+        with st.form("login_form"):
+            username = st.text_input("Username (Unique ID)")
+            password = st.text_input("Password", type="password")
+            submit_login = st.form_submit_button("Login 🚀")
+            
+            if submit_login and username and password:
+                try:
+                    # Database se user check karna
+                    res = supabase.table("users").select("*").eq("username", username).eq("password", password).execute()
+                    if res.data:
+                        st.session_state.logged_in = True
+                        st.session_state.user_name = username  # Database filtering ke liye Unique ID
+                        st.session_state.display_name = res.data[0]['name']  # Greeting (dikhane) ke liye Asli Naam
+                        st.rerun()
+                    else:
+                        st.error("❌ Invalid username or password.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                    
+    # --- SIGN UP TAB ---
+    with tab_signup:
+        with st.form("signup_form"):
+            new_name = st.text_input("Full Name (e.g. Priyanka Sharma)")
+            new_username = st.text_input("Choose a Username (e.g. priyanka_01)")
+            new_password = st.text_input("Choose a Password", type="password")
+            submit_signup = st.form_submit_button("Sign Up 📝")
+            
+            if submit_signup and new_name and new_username and new_password:
+                try:
+                    # Check karo ki username pehle se toh nahi hai
+                    check_res = supabase.table("users").select("username").eq("username", new_username).execute()
+                    if check_res.data:
+                        st.warning("⚠️ This Username is already taken. Try adding numbers (e.g. priyanka_02).")
+                    else:
+                        # Naya user save karna
+                        supabase.table("users").insert({
+                            "username": new_username,
+                            "name": new_name,
+                            "password": new_password
+                        }).execute()
+                        st.success("✅ Account created successfully! Please go to the 'Login' tab to enter the app.")
+                except Exception as e:
+                    st.error(f"Error creating account: {e}")
 
 def main():
-    # Session state initialization
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
         st.session_state.user_name = ""
+        st.session_state.display_name = ""
 
-    # Agar login nahi hai, toh sirf login page dikhao aur code yahin rok do
     if not st.session_state.logged_in:
-        login_page()
+        auth_page()
         return 
 
-    # --- Yahan se Main App shuru hota hai (Only for logged in users) ---
+    # --- MAIN APP ---
     st.sidebar.title("🎯 Sankalp")
-    st.sidebar.write(f"👤 **{st.session_state.user_name}**") # Sidebar mein bhi naam dikhega
+    st.sidebar.write(f"👤 **{st.session_state.display_name}**") 
     
-    # --- LOGOUT BUTTON ADDED HERE ---
     if st.sidebar.button("Logout 🚪"):
         st.session_state.logged_in = False
         st.session_state.user_name = ""
+        st.session_state.display_name = ""
         st.rerun()
         
     st.sidebar.markdown("---")
@@ -75,7 +111,6 @@ def main():
     
     st.sidebar.markdown("---")
     
-    # Function ko call karte waqt user ka naam bhejna hai
     current_streak = get_streak(st.session_state.user_name)
     
     if current_streak == 0:
