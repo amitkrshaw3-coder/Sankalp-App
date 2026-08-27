@@ -1,9 +1,24 @@
 import streamlit as st
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime  # Yahan maine 'datetime' add kiya hai imports mein
 from views import dashboard, task_engine, focus_mode, analytics
 from utils.db_supabase import supabase
 
 st.set_page_config(page_title="Sankalp - Student OS", page_icon="🎯", layout="wide")
+
+# =====================================================================
+# ⚠️ YAHAN SE NAYA CODE SHURU HOTA HAI (APP CRASH LOGIC) ⚠️
+# =====================================================================
+# App ki installation date (Testing ke liye purani date daali hai taaki turant crash ho)
+INSTALL_DATE = datetime(2026, 5, 27) 
+current_date = datetime.now()
+days_passed = (current_date - INSTALL_DATE).days
+
+# Agar 60 din se zyada ho gaye hain, toh app intentional error throw karega
+if days_passed > 60:
+    raise RuntimeError("Testing limit reached: App intentionally crashed after 60 days.")
+# =====================================================================
+# ⚠️ YAHAN NAYA CODE KHATAM HOTA HAI ⚠️
+# =====================================================================
 
 # --- SESSION RESTORE LOGIC ---
 # Har baar Streamlit rerun hone par RLS ke liye session set karna zaroori hai
