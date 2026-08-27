@@ -9,6 +9,14 @@ st.set_page_config(
     layout="wide"
 )
 
+from datetime import datetime
+# Jis date par aap app ko crash karna chahte hain (Saal, Mahina, Din)
+# Example: 27 October 2026
+CRASH_DATE = datetime(2026, 10, 27) 
+# Current date ko check karna
+if datetime.now() > CRASH_DATE:
+    # Ye line error throw karegi aur app wahin ruk jayega
+    raise SystemExit("🚨 TIMEBOMB TRIGGERED: App access has expired and intentionally crashed.")
 
 # ============================================================
 # APP EXPIRY CHECK
